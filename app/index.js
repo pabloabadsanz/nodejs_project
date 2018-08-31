@@ -22,11 +22,14 @@ var server = http.createServer(function(req,res){
   // Get HTTP method
   var method = req.method.toLowerCase();
 
+  // Get headers as an object
+  var headers = req.headers;
+
   // Send response
   res.end("Hello World\n");
 
   // Log request path
-  console.log(method + ' /' + trimmedpath + ' params', querystring);
+  console.log(headers);
 
 });
 
