@@ -16,11 +16,14 @@ var server = http.createServer(function(req,res){
   var path = parsedURL.pathname;
   var trimmedpath = path.replace(/^\/+|\/+$/g,'');
 
+  // Get HTTP method
+  var method = req.method.toLowerCase();
+
   // Send response
   res.end("Hello World\n");
 
   // Log request path
-  console.log('Request received. Path: ' + trimmedpath);
+  console.log(method + ' /' + trimmedpath);
 
 });
 
