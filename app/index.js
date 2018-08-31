@@ -35,11 +35,36 @@ var server = http.createServer(function(req,res){
   req.on('end',function(){
     buffer += decoder.end();
 
-    // Send response
-    res.end("Hello World\n");
+    // Choose the handler request should go to. If not found, use the notFound one
+    var chosenhandler = typeof(router[trimmedpath]) !== 'undefined' ? router[trimmedpath] : handlers.notFound;
 
-    // Log request path
-    console.log("Payload: " + buffer);
+    // Construct data object to send to handler
+    var data = {
+      'trimmedPath' : trimmedpath,
+      'queryStringObject': querystring,
+      'method': method,
+      'headers': headers,
+      'payload': buffer
+    };
+
+    // Route request to handler specified in the router
+    chosenhandler(data,function(statuscode,payload){
+      // Use the status code called back by handler, or default to 200
+      statuscode = typeof(statuscode) == 'number' ? statuscode : 200;
+
+      // Use the payload called back by the handler, or default to empty object
+      payload = typeof(payload) == 'object' ? payload : {};
+
+      // Convert the payload to string
+      var payloadstring = JSON.stringify(payload);
+
+      // Return the response
+      res.writeHead(statuscode);
+      res.end(payloadstring);
+
+      console.log("Response: ", statuscode, payloadstring);
+
+    });
 
   });
 
@@ -49,3 +74,22 @@ var server = http.createServer(function(req,res){
 server.listen(1234, function(){
   console.log("Server listening on port 1234");
 });
+
+// Handlers
+var handlers = {};
+
+// Defining Sample handler
+handlers.sample = function(data,callback){
+  // Callback http status code, and a payload
+  callback(406,{'name': 'sample handler'});
+};
+
+// The not found handler
+handlers.notFound = function(data,callback){
+  callback(404);
+};
+
+// Defining a request router
+var router = {
+  'sample': handlers.sample
+}
