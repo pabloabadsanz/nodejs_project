@@ -9,6 +9,8 @@ var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
 var config = require('./config');
 var fs = require('fs');
+var handlers = require('./lib/handlers');
+var helpers = require('./lib/helpers');
 
 // Instantiate HTTP server
 var httpserver = http.createServer(function(req,res){
@@ -71,7 +73,7 @@ var unifiedServer = function(req,res){
       'queryStringObject': querystring,
       'method': method,
       'headers': headers,
-      'payload': buffer
+      'payload': helpers.parseJSONtoObject(buffer)
     };
 
     // Route request to handler specified in the router
@@ -97,19 +99,8 @@ var unifiedServer = function(req,res){
   });
 };
 
-// Handlers
-var handlers = {};
-
-handlers.ping = function(data,callback){
-  callback(200);
-};
-
-// The not found handler
-handlers.notFound = function(data,callback){
-  callback(404);
-};
-
 // Defining a request router
 var router = {
-  'ping': handlers.ping
+  'ping': handlers.ping,
+  'users': handlers.users
 }
