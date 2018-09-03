@@ -21,18 +21,18 @@ httpserver.listen(config.httpPort, function(){
 });
 
 // Instantiate HTTPS Server
-var httpsserveroptions = {
-  'key' : fs.readFileSync('./https/key.pem'),
-  'cert' : fs.readFileSync('./https/cert.pem')
-};
-var httpsserver = https.createServer(httpsserveroptions,function(req,res){
-  unifiedServer(req,res);
-});
+// var httpsserveroptions = {
+//   'key' : fs.readFileSync('./https/key.pem'),
+//   'cert' : fs.readFileSync('./https/cert.pem')
+// };
+// var httpsserver = https.createServer(httpsserveroptions,function(req,res){
+//   unifiedServer(req,res);
+// });
 
 // Start HTTPS server
-httpsserver.listen(config.httpsPort, function(){
-  console.log("Server listening on port " + config.httpsPort);
-});
+// httpsserver.listen(config.httpsPort, function(){
+//   console.log("Server listening on port " + config.httpsPort);
+// });
 
 // All the server logic for both the http and https server
 var unifiedServer = function(req,res){
