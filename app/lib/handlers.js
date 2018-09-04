@@ -6,6 +6,7 @@
 // Dependencies
 var _data = require('./data');
 var helpers = require('./helpers');
+var config = require('../config');
 
 // Define the handlers
 var handlers = {};
@@ -352,6 +353,96 @@ handlers._tokens.verirytoken = function(id, phone, callback) {
       callback(false);
     }
   });
+};
+
+// Checks
+handlers.checks = function(data, callback) {
+  var acceptablemethods = ['post', 'get', 'put', 'delete'];
+  if (acceptablemethods.indexOf(data.method) > -1) {
+    handlers._checks[data.method](data, callback);
+  } else {
+    callback(405);
+  }
+};
+
+// Container for all the checks methods
+handlers._checks = {};
+
+// Check POST
+// Required data: protocol, url, method, successCodes, timeoutSeconds
+// Optional data: none
+handlers._checks.post = function(data, callback) {
+  // Validate inputs
+  var protocol = typeof(data.payload.protocol) == 'string' && ['https', 'http'].indexOf(data.payload.protocol) > -1 ? data.payload.protocol : false;
+  var url = typeof(data.payload.url) == 'string' && data.payload.url.trim().length > 0 ? data.payload.url : false;
+  var method = typeof(data.payload.method) == 'string' && ['post', 'get', 'put', 'delete'].indexOf(data.payload.method) > -1 ? data.payload.method : false;
+  var successCodes = typeof(data.payload.successCodes) == 'object' && data.payload.successCodes instanceof Array && data.payload.successCodes.length > 0 ? data.payload.successCodes : false;
+  var timeoutSeconds = typeof(data.payload.timeoutSeconds) == 'number' && data.payload.timeoutSeconds % 1 === 0 && data.payload.timeoutSeconds >= 1 && data.payload.timeoutSeconds <= 5 ? data.payload.timeoutSeconds : false;
+
+  if (protocol && url && method && successCodes && timeoutSeconds) {
+    // Get the token from the headers
+    var token = typeof(data.headers.token) == 'string' ? data.headers.token : false;
+
+    // Lookup the user by reading the token
+    _data.read('tokens', token, function(err, tokenData) {
+      if (!err && tokenData) {
+        var userphone = tokenData.phone;
+
+        // Lookup the user data
+        _data.read('users', userphone, function(err, userData) {
+          if (!err && userData) {
+            var userchecks = typeof(userData.checks) == 'object' && userData.checks instanceof Array ? userData.checks : [];
+
+            // Verify that the user has less than the number of max-checks-per-user
+            if (userchecks.length < config.maxChecks) {
+              // Create a random id for the check
+              var checkId = helpers.createRandomString(20);
+
+              // Create the ckeck object, and include the user's phone
+              var checkobject = {
+                'id': checkId,
+                'userPhone': userphone,
+                'protocol': protocol,
+                'url': url,
+                'method': method,
+                'successCodes': successCodes,
+                'timeoutSeconds': timeoutSeconds
+              };
+
+              // Save the object
+              _data.create('checks', checkId, checkobject, function(err) {
+                if (!err) {
+                  // Add the check id to the user's object
+                  userData.checks = userchecks;
+                  userData.checks.push(checkId);
+
+                  // Save the new user data
+                  _data.update('users', userphone, userData, function(err) {
+                    if (!err) {
+                      // Return the data about the new check
+                      callback(200, checkobject);
+                    } else {
+                      callback(500, {'Error': 'Could not update the user with the new check'});
+                    }
+                  });
+                } else {
+                  callback(500, {'Error': 'Could not create the new check'});
+                }
+              });
+            } else {
+              callback(400, {'Error': 'The user already has the maximum number of checks ('+config.maxChecks+')'});
+            }
+          } else {
+            callback(403);
+          }
+        });
+      } else {
+        callback(403);
+      }
+    });
+  } else {
+    callback(400, {'Error': 'Missing required inputs, or inputs are invalid'});
+  }
 };
 
 handlers.ping = function(data,callback){
