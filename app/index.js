@@ -3,106 +3,24 @@
  */
 
 // Dependencies
-var http = require('http');
-var https = require('https');
-var url = require('url');
-var StringDecoder = require('string_decoder').StringDecoder;
-var config = require('./config');
-var fs = require('fs');
-var handlers = require('./lib/handlers');
-var helpers = require('./lib/helpers');
+var server = require('./lib/server');
+var workers = require('./lib/workers');
 
-// Instantiate HTTP server
-var httpserver = http.createServer(function(req,res){
-  unifiedServer(req,res);
-});
+// Declare the application
+var app = {};
 
-// Start HTTP server
-httpserver.listen(config.httpPort, function(){
-  console.log("Server listening on port " + config.httpPort);
-});
+// Initialization function
+app.init = function() {
+  // Start the server
+  server.init();
 
-// Instantiate HTTPS Server
-// var httpsserveroptions = {
-//   'key' : fs.readFileSync('./https/key.pem'),
-//   'cert' : fs.readFileSync('./https/cert.pem')
-// };
-// var httpsserver = https.createServer(httpsserveroptions,function(req,res){
-//   unifiedServer(req,res);
-// });
+  // Start the workers
+  // workers.init();
 
-// Start HTTPS server
-// httpsserver.listen(config.httpsPort, function(){
-//   console.log("Server listening on port " + config.httpsPort);
-// });
-
-// All the server logic for both the http and https server
-var unifiedServer = function(req,res){
-
-  // Get and parse url
-  var parsedURL = url.parse(req.url, true);
-
-  // Get path
-  var path = parsedURL.pathname;
-  var trimmedpath = path.replace(/^\/+|\/+$/g,'');
-
-  // Get query String
-  var querystring = parsedURL.query;
-
-  // Get HTTP method
-  var method = req.method.toLowerCase();
-
-  // Get headers as an object
-  var headers = req.headers;
-
-  // Get payload, if there's any
-  var decoder = new StringDecoder('utf-8');
-  var buffer = '';
-  req.on('data', function(data){
-    buffer += decoder.write(data);
-  });
-  req.on('end',function(){
-    buffer += decoder.end();
-
-    // Choose the handler request should go to. If not found, use the notFound one
-    var chosenhandler = typeof(router[trimmedpath]) !== 'undefined' ? router[trimmedpath] : handlers.notFound;
-
-    // Construct data object to send to handler
-    var data = {
-      'trimmedPath' : trimmedpath,
-      'queryStringObject': querystring,
-      'method': method,
-      'headers': headers,
-      'payload': helpers.parseJSONtoObject(buffer)
-    };
-
-    // Route request to handler specified in the router
-    chosenhandler(data,function(statuscode,payload){
-      // Use the status code called back by handler, or default to 200
-      statuscode = typeof(statuscode) == 'number' ? statuscode : 200;
-
-      // Use the payload called back by the handler, or default to empty object
-      payload = typeof(payload) == 'object' ? payload : {};
-
-      // Convert the payload to string
-      var payloadstring = JSON.stringify(payload);
-
-      // Return the response
-      res.setHeader('Content-Type', 'application/json');
-      res.writeHead(statuscode);
-      res.end(payloadstring);
-
-      console.log("Response: ", statuscode, payloadstring);
-
-    });
-
-  });
 };
 
-// Defining a request router
-var router = {
-  'ping': handlers.ping,
-  'users': handlers.users,
-  'tokens': handlers.tokens,
-  'checks': handlers.checks
-}
+// Execute
+app.init();
+
+// Export the application
+module.exports = app;
