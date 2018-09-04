@@ -167,7 +167,6 @@ handlers._users.put = function(data, callback) {
 
 // Users - DELETE
 // Required data: phone
-// @TODO Cleanup (delete) any other data files associated with this user
 handlers._users.delete = function(data, callback) {
   // Check that the phone number is valid
   var phone = typeof(data.queryStringObject.phone) == 'string' && data.queryStringObject.phone.trim().length == 10 ? data.queryStringObject.phone.trim() : false;
@@ -182,7 +181,32 @@ handlers._users.delete = function(data, callback) {
           if (!err && data) {
             _data.delete('users', phone, function(err) {
               if (!err) {
-                callback(200);
+                // Delete each of the checks associated with the user
+                var userchecks = typeof(data.checks) == 'object' && data.checks instanceof Array ? data.checks : [];
+                var checkstodelete = userchecks.length;
+                if (checkstodelete > 0) {
+                  var checksdeleted = 0;
+                  var deletionErrors = false;
+                  // Loop through the checks
+                  userchecks.forEach(function(checkId) {
+                    // Delete the check
+                    _data.delete('checks', checkId, function(err) {
+                      if (err) {
+                        deletionErrors = true;
+                      }
+                      checksdeleted++;
+                      if(checksdeleted == checkstodelete) {
+                        if (!deletionErrors) {
+                          callback(200);
+                        } else {
+                          callback(500, {'Error': 'Errors encountered while attempting to delete all of the user\'s checks. All checks may not have deleted from the system successfully'});
+                        }
+                      }
+                    });
+                  });
+                } else {
+                  callback(200);
+                }
               } else {
                 callback(500, {'Error': 'Could not delete the specified user'});
               }
@@ -537,6 +561,65 @@ handlers._checks.put = function(data, callback) {
     } else {
       callback(400, {'Error': 'Missing fields to update'});
     }
+  } else {
+    callback(400, {'Error': 'Missing required field'});
+  }
+};
+
+// Checks - DELETE
+// Required data: id
+// Optional data: none
+handlers._checks.delete = function(data, callback) {
+  // Check that the id is valid
+  var id = typeof(data.queryStringObject.id) == 'string' && data.queryStringObject.id.trim().length == 20 ? data.queryStringObject.id.trim() : false;
+  if (id) {
+    // Lookup the check
+    _data.read('checks', id, function(err, checkData) {
+      if (!err && checkData) {
+        // Get the token from the headers
+        var token = typeof(data.headers.token) == 'string' ? data.headers.token : false;
+        // Verify that the given token is valid for the phone number
+        handlers._tokens.verirytoken(token, checkData.userPhone, function(tokenIsValid) {
+          if (tokenIsValid) {
+            // Delete the check data
+            _data.delete('checks', id, function(err) {
+              if (!err) {
+                // Lookup the user
+                _data.read('users', checkData.userPhone, function(err, userData) {
+                  if (!err && userData) {
+                    var userchecks = typeof(userData.checks) == 'object' && userData.checks instanceof Array ? userData.checks : [];
+
+                    // Remove the deleted check from their list of checks
+                    var checkposition = userchecks.indexOf(id);
+                    if (checkposition > -1) {
+                      userchecks.splice(checkposition, 1);
+                      // Re-save the user's data
+                      _data.update('users', checkData.userPhone, userData, function(err) {
+                        if (!err) {
+                          callback(200);
+                        } else {
+                          callback(500, {'Error': 'Could not update the user'});
+                        }
+                      });
+                    } else {
+                      callback(500, {'Error': 'Could not find the check on the user\'s object'});
+                    }
+                  } else {
+                    callback(500, {'Error': 'Could not find the user who created the check'});
+                  }
+                });
+              } else {
+                callback(500, {'Error': 'Could not delete the check data'});
+              }
+            });
+          } else {
+            callback(403, {'Error': 'Missing required token in header, or token is invalid'});
+          }
+        });
+      } else {
+        callback(400, {'Error': 'The specified check id does not exist'});
+      }
+    });
   } else {
     callback(400, {'Error': 'Missing required field'});
   }
