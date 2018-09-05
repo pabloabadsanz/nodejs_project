@@ -13,6 +13,8 @@ var fs = require('fs');
 var handlers = require('./handlers');
 var helpers = require('./helpers');
 var path = require('path');
+var util = require('util');
+var debug = util.debuglog('server');
 
 // Instantiate the server module object
 var server = {};
@@ -78,7 +80,12 @@ server.unifiedServer = function(req,res){
       res.writeHead(statuscode);
       res.end(payloadstring);
 
-      console.log("Response: ", statuscode, payloadstring);
+      // If the response is 200, print green otherwise print red
+      if (statuscode == 200) {
+        debug('\x1b[32m%s\x1b[0m', method.toUpperCase() + ' /' + trimmedpath + ' ' + statuscode);
+      } else {
+        debug('\x1b[31m%s\x1b[0m', method.toUpperCase() + ' /' + trimmedpath + ' ' + statuscode);
+      }
 
     });
 
@@ -97,7 +104,7 @@ server.router = {
 server.init = function() {
   // Start HTTP server
   server.httpserver.listen(config.httpPort, function(){
-    console.log("Server listening on port " + config.httpPort);
+    console.log('\x1b[36m%s\x1b[0m', "Server listening on port " + config.httpPort);
   });
 
 }
