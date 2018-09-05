@@ -11,6 +11,7 @@ var https = require('https');
 var http = require('http');
 var helpers = require('./helpers');
 var url = require('url');
+var _logs = require('./logs');
 
 // Instantiate the worker object
 var workers = {};
@@ -41,7 +42,7 @@ workers.gatherAllChecks = function() {
 workers.validateCheckData = function(originalCheckData) {
   originalCheckData = typeof(originalCheckData) == 'object' && originalCheckData !== null ? originalCheckData : [];
   originalCheckData.id = typeof(originalCheckData.id) == 'string' && originalCheckData.id.length == 20 ? originalCheckData.id : false;
-  originalCheckData.userPhone = typeof(originalCheckData.userPhone) == 'string' && originalCheckData.userPhone.length == 9 ? originalCheckData.userPhone : false;
+  originalCheckData.userPhone = typeof(originalCheckData.userPhone) == 'string' && originalCheckData.userPhone.length == 10 ? originalCheckData.userPhone : false;
   originalCheckData.protocol = typeof(originalCheckData.protocol) == 'string' && ['http', 'https'].indexOf(originalCheckData.protocol) > -1 ? originalCheckData.protocol : false;
   originalCheckData.url = typeof(originalCheckData.url) == 'string' && originalCheckData.url.length > 9 ? originalCheckData.url : false;
   originalCheckData.method = typeof(originalCheckData.method) == 'string' && ['get', 'put', 'post', 'delete'].indexOf(originalCheckData.method) > -1 ? originalCheckData.method : false;
@@ -145,10 +146,14 @@ workers.processCheckOutcome = function(originalCheckData, checkOutcome) {
   // Decide if an alert is warranted
   var alertWarranted = originalCheckData.lastChecked && originalCheckData.state !== state ? true : false;
 
+  // Log the outcome of the check
+  var timeOfCheck = Date.now();
+  workers.log(originalCheckData, checkOutcome, state, alertWarranted, timeOfCheck);
+
   // Update the check data
   var newCheckData = originalCheckData;
   newCheckData.state = state;
-  newCheckData.lastChecked = Date.now();
+  newCheckData.lastChecked = timeOfCheck;
 
   // Save the updates
   _data.update('checks', newCheckData.id, newCheckData, function(err) {
@@ -178,11 +183,37 @@ workers.alertUserToStatusChange = function(newCheckData) {
   })
 };
 
+workers.log = function(originalCheckData, checkOutcome, state, alertWarranted, timeOfCheck) {
+  // Form the log data
+  var logData = {
+    'check': originalCheckData,
+    'outcome': checkOutcome,
+    'state': state,
+    'alert': alertWarranted,
+    'time': timeOfCheck
+  };
+
+  // Convert data to a string
+  var logString = JSON.stringify(logData);
+
+  // Determine the name of the log file
+  var logFileName = originalCheckData.id;
+
+  // Append the log string to the file
+  _logs.append(logFileName, logString, function(err) {
+    if (!err) {
+      console.log("Logging to file succeeded");
+    } else {
+      console.log("Logging to file failed");
+    }
+  });
+};
+
 // Timer to execute the worker process once per minute
 workers.loop = function() {
   setInterval(function() {
     workers.gatherAllChecks();
-  }, 1000 * 60);
+  }, 1000 * 5);
 };
 
 // Init script
