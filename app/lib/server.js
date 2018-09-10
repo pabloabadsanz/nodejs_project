@@ -55,6 +55,9 @@ server.unifiedServer = function(req,res){
     // Choose the handler request should go to. If not found, use the notFound one
     var chosenhandler = typeof(server.router[trimmedpath]) !== 'undefined' ? server.router[trimmedpath] : handlers.notFound;
 
+    // If the request is within the public directory, use the public handler instead
+    chosenhandler = trimmedpath.indexOf('public/') > -1 ? handlers.public : chosenhandler;
+
     // Construct data object to send to handler
     var data = {
       'trimmedPath' : trimmedpath,
@@ -83,6 +86,26 @@ server.unifiedServer = function(req,res){
       }
       if (contentType == 'html') {
         res.setHeader('Content-Type', 'text/html');
+        payloadString = typeof(payload) == 'string' ? payload : '';
+      }
+      if (contentType == 'favicon') {
+        res.setHeader('Content-Type', 'image/x-icon');
+        payloadString = typeof(payload) !== 'undefined' ? payload : '';
+      }
+      if (contentType == 'css') {
+        res.setHeader('Content-Type', 'text/css');
+        payloadString = typeof(payload) !== 'undefined' ? payload : '';
+      }
+      if (contentType == 'png') {
+        res.setHeader('Content-Type', 'image/png');
+        payloadString = typeof(payload) !== 'undefined' ? payload : '';
+      }
+      if (contentType == 'jpg') {
+        res.setHeader('Content-Type', 'image/jpeg');
+        payloadString = typeof(payload) !== 'undefined' ? payload : '';
+      }
+      if (contentType == 'plain') {
+        res.setHeader('Content-Type', 'text/plain');
         payloadString = typeof(payload) == 'string' ? payload : '';
       }
 
@@ -116,7 +139,9 @@ server.router = {
   'ping': handlers.ping,
   'api/users': handlers.users,
   'api/tokens': handlers.tokens,
-  'api/checks': handlers.checks
+  'api/checks': handlers.checks,
+  'favicon.ico': handlers.favicon,
+  'public': handlers.public
 }
 
 // Init script
