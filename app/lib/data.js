@@ -37,7 +37,6 @@ lib.create = function(dir, file, data, callback) {
         }
       });
     } else {
-      console.log(err);
       callback('Could not create new file. It may already exist');
     }
   });

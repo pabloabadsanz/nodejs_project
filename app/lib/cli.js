@@ -209,7 +209,24 @@ cli.responders.listUsers = function() {
 
 // More user info
 cli.responders.moreUserInfo = function(str) {
-  console.log("You asked for more user info", str);
+  // Get the id from the string provided to us
+  var arr = str.split('--');
+  var userId = typeof(arr[1]) == 'string' && arr[1].trim().length > 0 ? arr[1].trim() : false;
+
+  if (userId) {
+    // Look the user up
+    _data.read('users', userId, function(err, userData) {
+      if (!err && userData) {
+        // Remove the hashed password
+        delete userData.hashedPassword;
+
+        // Print the JSON with highlighted text
+        cli.verticalSpace();
+        console.dir(userData, {'colors': true});
+        cli.verticalSpace();
+      }
+    });
+  }
 };
 
 // List checks
