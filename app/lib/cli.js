@@ -307,7 +307,7 @@ cli.responders.moreLogInfo = function(str) {
         // Split into lines
         var arr = strData.split('\n');
         arr.forEach(function(jsonString) {
-          var logObject = helpers.parseJsonToObject(jsonString);
+          var logObject = helpers.parseJSONtoObject(jsonString);
           if (logObject && JSON.stringify(logObject) !== '{}') {
             console.dir(logObject, {'colors': true});
             cli.verticalSpace();
