@@ -373,6 +373,12 @@ handlers.public = function(data, callback) {
  *
  */
 
+// Example error
+handlers.exampleError = function() {
+  var err = new Error('This is an example error');
+  throw(err);
+};
+
 // Users
 handlers.users = function(data, callback) {
   var acceptablemethods = ['post', 'get', 'put', 'delete'];
