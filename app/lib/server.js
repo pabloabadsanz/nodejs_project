@@ -25,7 +25,7 @@ server.httpserver = http.createServer(function(req,res){
 });
 
 // All the server logic for both the http and https server
-server.unifiedServer = function(req,res){
+server.unifiedServer = function(req,res) {
 
   // Get and parse url
   var parsedURL = url.parse(req.url, true);
