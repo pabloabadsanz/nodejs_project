@@ -15,6 +15,7 @@ var v8 = require('v8');
 var _data = require('./data');
 var _logs = require('./logs');
 var helpers = require('./helpers');
+var childProcess = require('child_process');
 
 // Instantiate CLI module obejct
 var cli = {};
@@ -280,16 +281,19 @@ cli.responders.moreCheckInfo = function(str) {
 
 // List logs
 cli.responders.listLogs = function(str) {
-  _logs.list(true, function(err, logFileNames) {
-    if (!err && logFileNames && logFileNames.length > 0) {
-      cli.verticalSpace();
-      logFileNames.forEach(function(logFileName) {
-        if (logFileName.indexOf('-') > -1) {
-          console.log(logFileName);
-          cli.verticalSpace();
-        }
-      });
-    }
+  var ls = childProcess.spawn('ls', ['./.logs/']);
+  ls.stdout.on('data', function(dataObject) {
+    // Explode into separate lines
+    var dataStr = dataObject.toString();
+    var logFileNames = dataStr.split('\n');
+
+    cli.verticalSpace();
+    logFileNames.forEach(function(logFileName) {
+      if (typeof(logFileName) == 'string' && logFileName.length > 0 && logFileName.indexOf('-') > -1) {
+        console.log(logFileName);
+        cli.verticalSpace();
+      }
+    });
   });
 };
 
